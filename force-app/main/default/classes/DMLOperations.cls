@@ -190,13 +190,18 @@ public with sharing class DMLOperations {
 	public static Account upsertAccount(String accountName) {
 		// Query for the Account
 		List<Account> accounts = [SELECT Id FROM Account WHERE Name = :accountName];
-
 		// if the Account exists, update the description
-
+        Account acc;
+        if (accounts.size() > 0) {
+            acc = accounts.get(0);
+            acc.Description = 'Updated Account';
+        } else {
 		// otherwise, create a new Account and set the description
-
+            acc = new Account(Name = accountName, Description = 'New Account');
+        }
 		// Upsert the Account
-		return null;
+        upsert acc;
+		return acc;
 	}
 
     /**
@@ -209,15 +214,37 @@ public with sharing class DMLOperations {
 	 * @param contactsToUpsert List of Contacts to be upserted and linked to accounts.
 	 */
 	public static void upsertAccountsWithContacts(List<Contact> contactsToUpsert) {
-		// Loop through each Contact
-
-		// Extract the Account Name from Contact's LastName
-
-		// Get the account based on the name or create one if it doesn't exist
-
-		// Link the Contact to its Account using the Account Id
-
+        // The main idea: not use SOQL and DML inside the for loop.
+		// Loop through each Contact to collect names
+        List<String> names = new List<String>();
+        for (Contact cont : contactsToUpsert) {
+            names.add(cont.LastName);
+        }
+        // Get all existing accounts with contact's last name and collect in a Map
+        List<Account> accounts = [SELECT Id, Name FROM Account WHERE Name IN :names];
+        Map<String, Id> accIdByName = new Map<String, Id>();
+        for (Account acc : accounts) {
+            accIdByName.put(acc.Name, acc.Id);
+        }
+        // Create Accounts for those Contact's names that has no Accounts 
+        List<Account> newAcc = new List<Account>();
+        for (String name : names) {
+            if (!accIdByName.keySet().contains(name)) {
+                Account acc = new Account(Name = name);
+                newAcc.add(acc);
+            }
+        }
+        insert newAcc;
+        // Put new Account's Name and Id to the Map
+        for (Account acc : newAcc) {
+            accIdByName.put(acc.Name, acc.Id);
+        }
+        // Link the Contact to its Account using the Account Id
+        for (Contact cont : contactsToUpsert) {
+            cont.AccountId = accIdByName.get(cont.LastName);
+        }
 		// Upsert the Contacts
+        upsert contactsToUpsert;
 	}
 
     /**
