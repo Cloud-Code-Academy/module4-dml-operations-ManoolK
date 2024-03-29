@@ -146,10 +146,10 @@ public with sharing class DMLOperations {
      */
     public static void upsertOpportunities(String accountName, List<String> oppNames) {
         // Get or create Account that has the name accountName.
-        Account acc;
+        Account acc = new Account();
         List<Account> accounts = [SELECT Id, Name FROM Account WHERE Name = :accountName];
         if (accounts.size() == 0) {
-            acc = new Account(Name = accountName);
+            acc.Name = accountName;
             insert acc;
         } else {
             acc = accounts.get(0);
@@ -253,11 +253,19 @@ public with sharing class DMLOperations {
      * @param leadNames The list of Lead names to be inserted.
      */
     public static void insertAndDeleteLeads(List<String> leadNames) {
+        List<Lead> leads = new List<Lead>();
         // Loop through each Lead name
-
+        for (String leadName : leadNames) {
+            Lead newLead = new Lead();
+            newLead.LastName = leadName;
+            newLead.Status = 'Open - Not Contacted';
+            newLead.Company = 'Test Company';
+            leads.add(newLead);
+        }
         // Insert the Leads
-
+        insert leads;
         // Delete the Leads
+        delete leads;
     }
 
 
@@ -268,8 +276,17 @@ public with sharing class DMLOperations {
      * @param numOfCases The number of cases to create.
      */
     public static void createAndDeleteCases(String accountId, Integer numOfCases) {
+        List<Case> cases = new List<Case>();
         // Insert the cases
-
+        for (Integer i = 0; i < numOfCases; i++) {
+            Case newCase = new Case();
+            newCase.Origin = 'Web';
+            newCase.Status = 'New';
+            newCase.AccountId = accountId;
+            cases.add(newCase);
+        }
+        insert cases;
         // Delete the cases
+        delete cases;
     }
 }
